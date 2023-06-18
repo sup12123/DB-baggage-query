@@ -4,20 +4,36 @@
 GtkWidget *entry1;
 GtkWidget *entry2;
 GtkWidget *status_label;
+PGconn *conn = NULL;
 
-void add_entry(GtkWidget *widget, gpointer data) {
-    const gchar *value1 = gtk_entry_get_text(GTK_ENTRY(entry1));
-    const gchar *value2 = gtk_entry_get_text(GTK_ENTRY(entry2));
+void connect_database(GtkWidget *widget, gpointer data) {
+    const gchar *dbname = gtk_entry_get_text(GTK_ENTRY(entry1));
+    const gchar *username = gtk_entry_get_text(GTK_ENTRY(entry2));
     
     // Connect to the database
-    PGconn *conn = PQconnectdb("dbname=mydatabase user=myuser password=mypassword");
+    conn = PQconnectdbParams(NULL, "dbname", dbname, "user", username, NULL);
     
     // Check if the connection was successful
     if (PQstatus(conn) != CONNECTION_OK) {
-        gtk_label_set_text(GTK_LABEL(status_label), "Connection to database failed");
+        gchar *error_message = g_strdup_printf("Connection to database failed: %s", PQerrorMessage(conn));
+        gtk_label_set_text(GTK_LABEL(status_label), error_message);
+        g_free(error_message);
         PQfinish(conn);
+        conn = NULL;
         return;
     }
+    
+    gtk_label_set_text(GTK_LABEL(status_label), "Connected to database");
+}
+
+void add_entry(GtkWidget *widget, gpointer data) {
+    if (!conn) {
+        gtk_label_set_text(GTK_LABEL(status_label), "Not connected to database");
+        return;
+    }
+    
+    const gchar *value1 = gtk_entry_get_text(GTK_ENTRY(entry1));
+    const gchar *value2 = gtk_entry_get_text(GTK_ENTRY(entry2));
     
     // Prepare the SQL statement
     gchar *sql = g_strdup_printf("INSERT INTO mytable (column1, column2) VALUES ('%s', '%s')", value1, value2);
@@ -31,14 +47,12 @@ void add_entry(GtkWidget *widget, gpointer data) {
         gtk_label_set_text(GTK_LABEL(status_label), error_message);
         g_free(error_message);
         PQclear(res);
-        PQfinish(conn);
         g_free(sql);
         return;
     }
     
     // Cleanup
     PQclear(res);
-    PQfinish(conn);
     g_free(sql);
     
     gtk_label_set_text(GTK_LABEL(status_label), "Entry added successfully");
@@ -63,6 +77,11 @@ int main(int argc, char *argv[]) {
     gtk_box_pack_start(GTK_BOX(vbox), entry1, FALSE, FALSE, 0);
     gtk_box_pack_start(GTK_BOX(vbox), entry2, FALSE, FALSE, 0);
     
+    // Create connect button
+    GtkWidget *connect_button = gtk_button_new_with_label("Connect to Database");
+    g_signal_connect(connect_button, "clicked", G_CALLBACK(connect_database), NULL);
+    gtk_box_pack_start(GTK_BOX(vbox), connect_button, FALSE, FALSE, 0);
+    
     // Create add button
     GtkWidget *add_button = gtk_button_new_with_label("Add Entry");
     g_signal_connect(add_button, "clicked", G_CALLBACK(add_entry), NULL);
@@ -77,6 +96,11 @@ int main(int argc, char *argv[]) {
     
     // Start the main loop
     gtk_main();
+    
+    // Clean up the connection
+    if (conn) {
+        PQfinish(conn);
+    }
     
     return 0;
 }
