@@ -17,7 +17,7 @@ void connect_database(GtkWidget *widget, gpointer data) {
     };
     
     // Connect to the database
-    conn = PQconnectdbParams(params, 0);
+    conn = PQconnectdbParams(params, 1); // Set expand_dbname flag to 1
     
     // Check if the connection was successful
     if (PQstatus(conn) != CONNECTION_OK) {
