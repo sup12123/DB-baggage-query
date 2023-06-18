@@ -9,9 +9,15 @@ PGconn *conn = NULL;
 void connect_database(GtkWidget *widget, gpointer data) {
     const gchar *dbname = gtk_entry_get_text(GTK_ENTRY(entry1));
     const gchar *username = gtk_entry_get_text(GTK_ENTRY(entry2));
+
+    const char *params[5] = {
+        "dbname", dbname,
+        "user", username,
+        NULL
+    };
     
     // Connect to the database
-    conn = PQconnectdbParams(NULL, "dbname", dbname, "user", username, NULL);
+    conn = PQconnectdbParams(NULL, params, 0);
     
     // Check if the connection was successful
     if (PQstatus(conn) != CONNECTION_OK) {
