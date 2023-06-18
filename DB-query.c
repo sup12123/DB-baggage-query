@@ -10,14 +10,11 @@ void connect_database(GtkWidget *widget, gpointer data) {
     const gchar *dbname = gtk_entry_get_text(GTK_ENTRY(entry1));
     const gchar *username = gtk_entry_get_text(GTK_ENTRY(entry2));
 
-    const char *params[5] = {
-        "dbname", dbname,
-        "user", username,
-        NULL
-    };
+    // Construct the connection string
+    gchar *conninfo = g_strdup_printf("dbname=%s user=%s", dbname, username);
     
     // Connect to the database
-    conn = PQconnectdbParams(params, 1); // Set expand_dbname flag to 1
+    conn = PQconnectdb(conninfo);
     
     // Check if the connection was successful
     if (PQstatus(conn) != CONNECTION_OK) {
@@ -26,11 +23,15 @@ void connect_database(GtkWidget *widget, gpointer data) {
         g_free(error_message);
         PQfinish(conn);
         conn = NULL;
+        g_free(conninfo);
         return;
     }
     
     gtk_label_set_text(GTK_LABEL(status_label), "Connected to database");
+    
+    g_free(conninfo);
 }
+
 
 void add_entry(GtkWidget *widget, gpointer data) {
     if (!conn) {
